@@ -1,1 +1,1 @@
-start: python STARK-GAMING-SISTEM/forwarder.py
+start: python forwarder.py
