@@ -20,8 +20,8 @@ client = TelegramClient('forwarder_session_allcards', api_id, api_hash)
 
 # --- Настройки карт и чатов ---
 CARD_TO_CHAT = {
-    '***0609': -4691714145,  # в группу
-    '***8628': -4720268824   # в личку или другую группу
+    '***3804': -4691714145,  # в группу
+    '***8628': -4720268824   # в другую группу
 }
 
 # Защита от повторов
@@ -29,17 +29,26 @@ handled_messages = set()
 
 @client.on(events.NewMessage(from_users='CardXabarBot'))
 async def handler(event):
+    print("🔔 Получено новое сообщение от CardXabarBot!")
+
     text = event.raw_text.strip()
-    message_hash = hash(text)
+    print("📩 Текст сообщения:", repr(text))
+
+    # Удаление невидимых символов
+    cleaned_text = text.replace('\u202a', '').replace('\u200e', '').replace('*', '')
+    message_hash = hash(cleaned_text)
 
     if message_hash in handled_messages:
+        print("⏸ Повторное сообщение. Пропускаем.")
         return
 
-    if '🟢 Perevod na kartu' not in text:
+    if '🟢 Perevod na kartu' not in cleaned_text:
+        print("⏸ Нет ключевого слова. Пропускаем.")
         return
 
     for card_number, chat_id in CARD_TO_CHAT.items():
-        if card_number in text:
+        if card_number.replace('*', '') in cleaned_text:
+            print(f"✅ Найдена карта {card_number}. Отправляем в чат {chat_id}")
             handled_messages.add(message_hash)
 
             lines = text.split('\n')
@@ -50,12 +59,18 @@ async def handler(event):
                 formatted_lines.append(line)
 
             formatted_text = "\n".join(formatted_lines)
-            await client.send_message(chat_id, formatted_text, parse_mode='html')
-            break  # останавливаем, чтобы не отправлялось дважды, если вдруг 2 карты в одном сообщении
+
+            try:
+                await client.send_message(chat_id, formatted_text, parse_mode='html')
+                print("📤 Сообщение успешно отправлено.")
+            except Exception as e:
+                print("❌ Ошибка при отправке:", e)
+
+            break
 
 # --- Запуск ---
 threading.Thread(target=run_flask).start()
 
 client.start()
-print("Userbot for 0609 & 8628 is running ✅")
+print("Userbot for 8628 & 3804 is running ✅")
 client.run_until_disconnected()
